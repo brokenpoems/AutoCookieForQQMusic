@@ -6,8 +6,6 @@ Get Cookie From QQMusic Website Without Opening browser
 
 GoogleChrome(已在Windows10以及CentOS做测试)或Chromium(未测试)
 
-# 开发环境
-
 # 运行环境:
 
 1. Python 3(3.6+为最佳)
