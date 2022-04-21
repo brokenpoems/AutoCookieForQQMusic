@@ -4,7 +4,7 @@ Get Cookie From QQMusic Website Without Opening browser
 
 # 运行前置
 
-GoogleChrome(已在Windows10以及CentOS做测试)或Chromium(未测试)
+GoogleChrome(已在Windows10以及CentOS做测试)或Chromium(未测试)以及对应版本的ChromeDriver
 
 # 运行环境:
 
