@@ -42,6 +42,7 @@ GoogleChrome(已在Windows10以及CentOS做测试)或Chromium(未测试)以及�
 * [ ] 浏览器是否显示的配置
 * [ ] 引入配置文件
 * [ ] 使用Action编译
+* [ ] 即开即用(即集成ChromeDriver和Chrome)
 
 # bug?
 
