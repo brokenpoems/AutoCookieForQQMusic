@@ -1,11 +1,12 @@
 # codeing=utf-8
 # Package
-
+# python 自带库
 import os
 import sys
 import time
 import platform
-
+import configparser
+# 第三方库
 import qrcode
 import qrcode_terminal
 from PIL import Image
@@ -13,61 +14,125 @@ from pyzbar.pyzbar import decode
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
+debug = False
 
 # 全局变量
+loginmode = 0
+configuse = False
+headless = False
+fileuse = False
+qqaccout = ""
+qqcipher = ""
+filename = ""
+config = configparser.ConfigParser()
 chrome_options = webdriver.ChromeOptions()
-mode = 0
-disable = False
-cookie = []
 
 
-# 选择工作模式:0 无窗口 1 有窗口(未完成,因为无法判断用户是否能使用窗口,所以默认无窗口)
-def chooce_workmode():
-    global chrome_options
-    chrome_options.add_argument('--headless')
+# Debug用函数,输出python表达式字符串和用户向字符串以及数据类型或者输出函数名
+def output(value="", funcname=""):
+    global debug
+    if debug:
+        print(funcname)
+        print(repr(value))
+        print(str(value))
+        print(type(value))
+    return
+
+
+# 载入配置文件
+def Load_config():
+    global loginmode, configuse, headless
+    global qqaccout, qqcipher, fileuse, filename
+    output(funcname="Load_config")
+    config.read('config.ini', encoding='utf-8')
+    if config.has_section('config'):
+        if(config.has_option('config', 'loginmode')):
+            loginmode = config.getint('config', 'loginmode')
+        if(config.has_option('config', 'configuse')):
+            configuse = config.getboolean('config', 'configuse')
+        if(config.has_option('config', 'headless')):
+            headless = config.getboolean('config', 'headless')
+        if(config.has_option('config', 'qqaccout')):
+            qqaccout = config.get('config', 'qqaccout')
+        if(config.has_option('config', 'qqcipher')):
+            qqcipher = config.get('config', 'qqcipher')
+        if(config.has_option('config', 'fileuse')):
+            fileuse = config.getboolean('config', 'fileuse')
+        if(config.has_option('config', 'filename')):
+            filename = config.get('config', 'filename')
+
+
+# 载入浏览器配置
+def ChromeSetting():
+    output(funcname="ChromeSetting")
+    global headless
+    if headless:
+        chrome_options.add_argument('--headless')
     chrome_options.add_argument("--no-sandbox")
-    return
-
-
-# Debug用函数,输出python表达式字符串和用户向字符串以及数据类型
-def output(value):
-    print(repr(value))
-    print(str(value))
-    print(type(value))
-    return
 
 
 # 安全输入数字,避免输入字符串报错
 def input_t(str):
+    output(funcname="input_t")
     src = input(str)
     while not src.isdigit():
         src = input()
     return eval(src)
 
 
-# 选择登陆方式 1 qq账号密码 2 qq扫码 3 微信扫码
-# disable用于判断qq账号是否异地登陆
+# 手动输入配置
 def chooce_mode():
-    global mode, disable
-    mode = 0
-    while ((mode == 1 and disable == True)
-           or (mode != 1 and mode != 2 and mode != 3 and mode != 4)):
-        if(disable):
-            mode = input_t("请选择登录方式:\n1.QQ账号密码(已禁用) 2.QQ扫码 3.微信扫码 4.退出\n")
-            # output(mode)
-        else:
-            mode = input_t("请选择登录方式:\n1.QQ账号密码(不推荐) 2.QQ扫码 3.微信扫码 4.退出\n")
-            # output(mode)
-        if ((mode == 1 and disable == True)
-                or (mode != 1 and mode != 2 and mode != 3 and mode != 4)):
+    output(funcname="chooce_mode")
+    global loginmode, headless, fileuse
+    global qqaccout, qqcipher, filename
+    loginmode = 0
+    headless = fileuse = False
+    qqaccout = qqcipher = filename = ""
+    # 登录模式 1.QQ账号密码 2.QQ扫码 3.微信扫码
+    while (loginmode != 1 and loginmode != 2 and loginmode != 3):
+        loginmode = input_t("请选择登录方式:\n1.QQ账号密码(不推荐) 2.QQ扫码 3.微信扫码\n")
+        # output(loginmode)
+        if (loginmode != 1 and loginmode != 2 and loginmode != 3):
             print("输入错误,请重新输入")
+    if(loginmode == 1):
+        print("您选择了QQ账号密码登陆")
+        qqaccout = input("请输入账号:\n")
+        output(value=qqaccout)
+        qqcipher = input("请输入密码：\n")
+        output(value=qqcipher)
+
+    # 浏览器显示方式 1.无窗口 2.有窗口
+    tempint = 0
+    while (tempint != 1 and tempint != 2):
+        tempint = input_t("请选择浏览器显示方式:\n1.无窗口 2.有窗口\n")
+        if (tempint != 1 and tempint != 2):
+            print("输入错误,请重新输入")
+    if tempint == 1:
+        headless = True
+    else:
+        headless = False
+
+    # 文件输出 1.输出到文件 2.直接输出
+    tempint = 0
+    while (tempint != 1 and tempint != 2):
+        tempint = input_t("成功获取后是否输出到文件:\n1.输出到文件 2.直接输出\n")
+        if (tempint != 1 and tempint != 2):
+            print("输入错误,请重新输入")
+    if tempint == 1:
+        fileuse = True
+    else:
+        fileuse = False
+    if(fileuse):
+        print("您选择了输出到文件")
+        filename = input("请输入输出文件名:\n")
+        output(value=filename)
     return
 
 
 # 0 账号或密码错误 1 成功 2 异地登陆
-def login_qq_account(account, cipher):
+def login_qq_account():
     flag = 1
-    global cookie
+    global cookie, qqaccout, qqcipher
     # 生成浏览器
     driver = webdriver.Chrome(options=chrome_options)
     code = driver.get("https://y.qq.com/")
@@ -80,9 +145,9 @@ def login_qq_account(account, cipher):
     driver.switch_to.frame("ptlogin_iframe")
     driver.find_element(By.ID, "switcher_plogin").click()
     driver.find_element(By.ID, "u").click()
-    driver.find_element(By.ID, "u").send_keys(account)
+    driver.find_element(By.ID, "u").send_keys(qqaccout)
     driver.find_element(By.ID, "p").click()
-    driver.find_element(By.ID, "p").send_keys(cipher)
+    driver.find_element(By.ID, "p").send_keys(qqcipher)
     driver.find_element(By.ID, "p").send_keys('\n')
     # driver.switch_to_default_content()
     time.sleep(3)
@@ -120,7 +185,7 @@ def outputqrcode(driver):
     return
 
 
-# 1 扫码成功 2 扫码失败
+# True 扫码成功 False 扫码失败
 def login_qq_qrcode():
     global cookie
     flag = 0
@@ -148,14 +213,16 @@ def login_qq_qrcode():
     # ToDo : 判断用户取消扫码(页面无法提供)
     while flag != 1 and flag != 2:
         flag = input_t("已确认?1.是 2.否(重新开始)\n")
-        # output(flag)
     time.sleep(3)
     cookie = driver.get_cookies()
     driver.quit()
-    return flag
+    if flag == 1:
+        return True
+    else:
+        return False
 
 
-# 1 扫码成功 2 扫码失败
+# True 扫码成功 False 扫码失败
 def login_wechat():
     # 生成浏览器
     global cookie
@@ -185,72 +252,68 @@ def login_wechat():
     time.sleep(3)
     cookie = driver.get_cookies()
     driver.quit()
-    return flag
+    if flag == 1:
+        return True
+    else:
+        return False
 
 
 # 登陆 True 成功 False 失败
 def login():
-    # print("login func")
-    global mode, disable
+    global loginmode
     flag = 0
-    if mode == 1:
-        account = input("请输入账号:\n")
-        # output(account)
-        cipher = input("请输入密码：\n")
-        # output(cipher)
-        flag = login_qq_account(account, cipher)
-        while(flag != 1):
-            if(flag == 2):
-                print("您的账号异地登陆,请更换登陆方式")
-                sys.stdout.flush()
-                disable = True
-                return False
-            else:
-                print("账号或密码错误")
-            account = input("请输入账号:\n")
-            # output(account)
-            cipher = input("请输入密码：\n")
-            # output(cipher)
-            flag = login_qq_account(account, cipher)
-    elif mode == 2:
-        if login_qq_qrcode() != 1:
+    if loginmode == 1:
+        flag = login_qq_account()
+        if(flag == 2):
+            print("您的账号异地登陆,请更换登陆方式")
             return False
-    elif mode == 3:
-        if login_wechat() != 1:
+        elif flag == 0:
+            print("账号或密码错误,请检查后重新开始")
             return False
-    elif mode == 4:
-        return True
+    elif loginmode == 2:
+        if not login_qq_qrcode():
+            return False
+    elif loginmode == 3:
+        if not login_wechat():
+            return False
     return True
 
 
 # 输出cookie
-def outputcookie(flag, file=""):
-    if flag == 1:
-        outputfile = open(file, "w")
+def outputcookie():
+    global fileuse, filename
+    if fileuse:
+        outputfile = open(filename, "w")
     cookie.reverse()
     for element in cookie:
-        if flag == 1:
+        if fileuse:
             print(element['name'], '=', element['value'],
                   end=';', file=outputfile)
         else:
             print(element['name'], '=', element['value'], end=';')
-    if flag != 1:
+    if not fileuse:
         print("")
 
-#主函数
+
+
+# 主函数
 def main():
-    # print("main func")
-    chooce_workmode()
-    chooce_mode()
-    while(not login()):
+    output(funcname="main")
+    Load_config()
+    if(not configuse):
         chooce_mode()
-    if mode != 4:
-        flag = input_t("cookie已获取,是否输出到文件(1.是 2.否)\n")
-        if flag == 1:
-            file = input("请输入文件名:\n")
-            outputcookie(flag, file)
-        else:
-            outputcookie(flag)
+    ChromeSetting()
+    global loginmode, headless, fileuse
+    global qqaccout, qqcipher, filename
+    output(loginmode)
+    output(headless)
+    output(fileuse)
+    output(qqaccout)
+    output(qqcipher)
+    output(filename)
+    if(login()):
+        outputcookie()
+    #ConfigParserObject.write(open(filename, 'w'))
 
 
 if __name__ == '__main__':
